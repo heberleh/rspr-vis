@@ -1952,57 +1952,59 @@ TODO:
 
 			if (LGT_VISUALIZATION){
 
+				cout << "Saving data for visualization." << endl;
 				// Create output file "visualization_data_<data and time>"
 				time_t t = std::time(0);   // get time now
 				struct tm * now = localtime( & t );
 				char buffer [80];
-				strftime (buffer,80,"visualization_data_%Y-%m-%d_%H-%M-%S.",now);
-				std::ofstream myfile;
-				myfile.open(buffer);
-				if(myfile.is_open())
+				strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
+				std::ofstream json;
+				json.open(buffer);
+				if(json.is_open())
 				{			
-					cout << "{" << endl; // json begin
+					json << "{" << endl; // json begin
 						bool first_node = true;
-						cout << "\"supertree_nodes\":{";
+						json << "\"supertree_nodes\":[";
 							for(int i = 0; i < num_nodes; i++) {
 								if (first_node){
-									cout << endl;
+									json << endl;
 									first_node = false;
 								}else{
-									cout << "," << endl;
+									json << "," << endl;
 								}
-								cout << "\"" << i << "\":{";
+								json << "{";
 
 									//internal nodes' trees_ids = intersection of children's trees_ids
-									cout << "\"trees_ids\":[]" << endl; 
+									json << "\"trees_ids\":[]" << endl; 
 
-								cout << "}" << endl;
+								json << "}" << endl;
 							}
-						cout << "}," << endl; // end supertree nodes
+						json << "]," << endl; // end supertree nodes
 						
-						cout << "\"lateral_transfers\":{";						
+						json << "\"lateral_transfers\":[";						
 							bool first_lt = true;	
 							for(int i = 0; i < num_nodes; i++) {
 								for(int j = 0; j < num_nodes; j++) {
 									if (transfer_counts[i][j] > 0){
 										if (first_lt){
-											cout << endl;
+											json << endl;
 											first_lt = false;
 										}else{
-											cout << "," << endl;
+											json << "," << endl;
 										}
-										cout << "{";
-										cout << "\"source\":" << i << "," ;
-										cout << "\"target\":" << j << ",";
-										cout << "\"rspr_lt_count\"" << transfer_counts[i][j];
-										cout << "}" << endl;
+										json << "{";
+										json << "\"source\":" << i << "," ;
+										json << "\"target\":" << j << ",";
+										json << "\"rspr_lt_count\":" << transfer_counts[i][j];
+										json << "}" << endl;
 									}								
 								}
 							}
-						cout << "}" << endl; // end lgts			
-					cout << "}" << endl; //json end
+						json << "]" << endl; // end lts			
+					json << "}" << endl; //json end
 				}
-				myfile.close();
+				json.close();
+				cout << "Data is saved:   "<< buffer << endl;
 			}
 
 			if (LGT_GROUPS != "") {
