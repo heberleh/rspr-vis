@@ -66,6 +66,11 @@ class transfer {
 	}
 };
 
+
+void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Node *super_tree, vector<Node *> *gene_trees);
+
+void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Forest *F1, Forest *F2, Forest *MAF1, Forest *MAF2, int gene_id);
+
 void add_transfers(vector<vector<int> > *transfer_counts, Node *super_tree,
 		vector<Node *> *gene_trees);
 void add_transfers(vector<vector<int> > *transfer_counts, Forest *F1,
@@ -80,6 +85,48 @@ Node *find_best_target(Node *source, Node *target, Node **best_target);
 void show_moves(Node *T1, Node *T2, map<string, int> *label_map,
 		map<int, string> *reverse_label_map);
 
+
+// ---- begin add transfers for visualization
+
+void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Node *super_tree, vector<Node *> *gene_trees) {
+	#pragma omp parallel for
+	for(int i = 0; i < gene_trees->size(); i++) {
+		Forest *MAF1 = NULL;
+		Forest *MAF2 = NULL;
+		Forest F1 = Forest(super_tree);
+		Forest F2 = Forest((*gene_trees)[i]);
+		if (sync_twins(&F1,&F2)) {
+			int distance = rSPR_branch_and_bound_simple_clustering(F1.get_component(0), F2.get_component(0), &MAF1, &MAF2);
+			expand_contracted_nodes(MAF1);
+			expand_contracted_nodes(MAF2);
+			sync_af_twins(MAF1, MAF2);
+			add_transfers(transfer_counts, trees_ids, &F1, &F2, MAF1, MAF2, i);
+		}
+		if (MAF1 != NULL)
+			delete MAF1;
+		if (MAF2 != NULL)
+			delete MAF2;
+	}
+}
+
+void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Forest *F1, Forest *F2, Forest *MAF1, Forest *MAF2, int gene_id) {
+	int start = 1;
+	if (MAF2->contains_rho())
+		start = 0;
+	for(int i = start; i < MAF2->num_components(); i++) {
+		Node *F2_source = MAF2->get_component(i);
+		Node *F1_source;
+		Node *F1_target;
+		if (!map_transfer(F2_source, F1, MAF2, &F1_source,
+					&F1_target)) {
+			continue;
+		}
+		#pragma omp atomic
+		(*transfer_counts)[F1_source->get_preorder_number()][F1_target->get_preorder_number()]++;
+		(*trees_ids)[F1_source->get_preorder_number()][F1_target->get_preorder_number()].insert(gene_id);
+	}
+}
+//------------- end add transfers for visualization
 
 void add_transfers(vector<vector<int> > *transfer_counts, Node *super_tree,
 		vector<Node *> *gene_trees) {

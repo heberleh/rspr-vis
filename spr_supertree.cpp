@@ -1937,6 +1937,98 @@ TODO:
 			cleanup = true;
 		}
 
+
+
+		if (LGT_VISUALIZATION){
+			cout << "LGT Analysis" << endl;
+			super_tree->preorder_number();
+			super_tree->edge_preorder_interval();
+			int num_nodes = super_tree->size();
+
+			vector<vector<int>> transfer_counts =
+				vector<vector<int>>(num_nodes, vector<int>(num_nodes, 0));
+
+			// stores all the trees (index) that are associated to each transfer
+			vector<vector<set<int>>> trees_ids =
+				vector<vector<set<int>>>(num_nodes, vector<set<int>>(num_nodes, set<int>()));
+
+			for(int i = 0; i < gene_trees.size(); i++) {
+				gene_trees[i]->preorder_number();
+				gene_trees[i]->edge_preorder_interval();
+			}
+
+			// update counts of transfers and sets of genes/trees that made them sum up
+			// update trees_ids  and  transfer_counts
+			add_transfers(&transfer_counts, &trees_ids, super_tree, &gene_trees);	
+
+
+			// Create output file "visualization_data_<data and time>"
+			cout << "Saving data for visualization." << endl;				
+			time_t t = std::time(0);   // get time now
+			struct tm * now = localtime( & t );
+			char buffer [80];
+			strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
+			std::ofstream json;
+			json.open(buffer);
+
+			// build json file with edges, nodes, attributes
+			if(json.is_open()){			
+				json << "{" << endl; // json begin
+					bool first_node = true;
+					json << "\"supertree_nodes\":[";
+						for(int i = 0; i < num_nodes; i++) {
+							if (first_node){
+								json << endl;
+								first_node = false;
+							}else{
+								json << "," << endl;
+							}
+							json << "{";
+
+								//internal nodes' trees_ids = intersection of children's trees_ids
+								json << "\"trees_ids\":[]" << endl; 
+
+							json << "}" << endl;
+						}
+					json << "]," << endl; // end supertree nodes
+					
+					json << "\"lateral_transfers\":[";						
+						bool first_lt = true;	
+						for(int i = 0; i < num_nodes; i++) {
+							for(int j = 0; j < num_nodes; j++) {
+								if (transfer_counts[i][j] > 0){
+									if (first_lt){
+										json << endl;
+										first_lt = false;
+									}else{
+										json << "," << endl;
+									}
+									json << "{";
+									json << "\"source\":" << i << "," ;
+									json << "\"target\":" << j << ",";
+									json << "\"rspr_lt_count\":" << transfer_counts[i][j] << ",";
+									json << "\"n_trees\":" << trees_ids[i][j].size() << ",";
+									json << "\"trees\":[";
+									bool first_gene = true;
+									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}        							
+									json << "]}" << endl;
+								}
+							}
+						}
+					json << "]" << endl; // end lts			
+				json << "}" << endl; //json end
+				}
+				json.close();
+				cout << "Data is saved:   "<< buffer << endl;
+		}
+
 		if (LGT_ANALYSIS) {
 			cout << "LGT Analysis" << endl;
 			super_tree->preorder_number();
@@ -1949,63 +2041,6 @@ TODO:
 				gene_trees[i]->edge_preorder_interval();
 			}
 			add_transfers(&transfer_counts, super_tree, &gene_trees);
-
-			if (LGT_VISUALIZATION){
-
-				cout << "Saving data for visualization." << endl;
-				// Create output file "visualization_data_<data and time>"
-				time_t t = std::time(0);   // get time now
-				struct tm * now = localtime( & t );
-				char buffer [80];
-				strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
-				std::ofstream json;
-				json.open(buffer);
-				if(json.is_open())
-				{			
-					json << "{" << endl; // json begin
-						bool first_node = true;
-						json << "\"supertree_nodes\":[";
-							for(int i = 0; i < num_nodes; i++) {
-								if (first_node){
-									json << endl;
-									first_node = false;
-								}else{
-									json << "," << endl;
-								}
-								json << "{";
-
-									//internal nodes' trees_ids = intersection of children's trees_ids
-									json << "\"trees_ids\":[]" << endl; 
-
-								json << "}" << endl;
-							}
-						json << "]," << endl; // end supertree nodes
-						
-						json << "\"lateral_transfers\":[";						
-							bool first_lt = true;	
-							for(int i = 0; i < num_nodes; i++) {
-								for(int j = 0; j < num_nodes; j++) {
-									if (transfer_counts[i][j] > 0){
-										if (first_lt){
-											json << endl;
-											first_lt = false;
-										}else{
-											json << "," << endl;
-										}
-										json << "{";
-										json << "\"source\":" << i << "," ;
-										json << "\"target\":" << j << ",";
-										json << "\"rspr_lt_count\":" << transfer_counts[i][j];
-										json << "}" << endl;
-									}								
-								}
-							}
-						json << "]" << endl; // end lts			
-					json << "}" << endl; //json end
-				}
-				json.close();
-				cout << "Data is saved:   "<< buffer << endl;
-			}
 
 			if (LGT_GROUPS != "") {
 				ifstream lgt_group_file;
@@ -2170,7 +2205,8 @@ TODO:
 				LGT_GROUPS = "";
 			}
 			cleanup = true;
-		}
+		} // end if LGT_ANALYSIS
+
 		else if (LGT_EVALUATION) {
 			cout << "LGT Evaluation" << endl;
 			super_tree->preorder_number();
