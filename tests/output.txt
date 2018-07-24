@@ -1,8 +1,0 @@
-INITIAL_TREE=./tests/SPR-MRP-Rooting.tree
-NUM_ITERATIONS=0
-skipped 0 lines with no opening bracket 
-skipped 205 multifurcating or invalid trees
-skipped 0 trees with less than 4 leaves
-194 gene trees remaining
-
-Initial Supertree:  (48,(69,(140,70)))
