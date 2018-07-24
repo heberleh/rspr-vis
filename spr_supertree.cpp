@@ -143,6 +143,9 @@ LGT ANALYSIS
 -lgt_analysis          Conduct an LGT analysis with the initial user-specified
                        or greedy addition tree
 
+-lgt_visualization	   Output the LGT analysis data to be visualized using the 
+																		? VISUALIZATION SYSTEM
+
 -lgt_csv               Output the LGT analysis seperated by commas rather than
                        spaces.
 
@@ -198,6 +201,7 @@ OTHER OPTIONS
 using namespace std;
 
 //#define DEBUG_ONE_TREE true
+//#define DEBUG_LGT_ANALYSIS
 
 
 // options to pick default
@@ -227,6 +231,7 @@ bool INVALID_TREES = false;
 bool VALID_TREES = false;
 bool VALID_TREES_ROOTED = false;
 bool LGT_ANALYSIS = false;
+bool LGT_VISUALIZATION =  false;
 bool LGT_EVALUATION = false;
 bool FIND_MAX_DEGREE = false;
 bool MULTI_TREES = false;
@@ -803,6 +808,9 @@ int main(int argc, char *argv[]) {
 		else if (strcmp(arg, "-lgt_analysis") == 0) {
 			LGT_ANALYSIS=true;
 		}
+		else if (strcmp(arg, "-lgt_visualization") == 0) {
+			LGT_VISUALIZATION=true;
+		}
 		else if (strcmp(arg, "-lgt_evaluation") == 0) {
 			LGT_EVALUATION=true;
 		}
@@ -1227,7 +1235,7 @@ int main(int argc, char *argv[]) {
 	for(int i = 0; i < gene_trees.size(); i++) {
 		if (VALID_TREES) {
 			cout << gene_tree_names[i];
-			cout << gene_trees[i]->str_subtree() << endl;
+			//cout << gene_trees[i]->str_subtree() << endl;
 		}
 		if (FIND_MAX_DEGREE) {
 			cout << gene_tree_names[i];
@@ -1375,10 +1383,10 @@ int main(int argc, char *argv[]) {
 				}
 				else {
 					super_forest[j]->numbers_to_labels(&reverse_label_map);
-					cout << super_forest[j]->str_subtree();
+					//cout << super_forest[j]->str_subtree();
 					super_forest[j]->labels_to_numbers(&label_map, &reverse_label_map);
 				}
-				cout << "   ";
+				//cout << "   ";
 			}
 			cout << endl;
 
@@ -1610,22 +1618,22 @@ TODO:
 				leaf_num++;
 				continue;
 			}
-			cout << "Adding leaf " << label->second;
-			cout << "\t("<< leaf_num++ << "/" <<  labels.size() << ")";
+			//cout << "Adding leaf " << label->second;
+			//cout << "\t("<< leaf_num++ << "/" <<  labels.size() << ")";
 			if (TIMING) {
 				current_time = time;
 				time = clock()/(double)CLOCKS_PER_SEC;
 				current_time = time - current_time;
 				cout << "\t" << current_time << "\t" << time;
 			}
-			cout << endl;
+			//cout << endl;
 			vector<Node *> current_gene_trees = vector<Node *>();
 			for(int i = 0; i < gene_trees.size(); i++) {
 				if (gene_trees[i]->contains_leaf(label->second))
 					current_gene_trees.push_back(gene_trees[i]);
 			}
-			cout << "gene_trees: " << gene_trees.size() << endl;
-			cout << "current_gene_trees: " << current_gene_trees.size() << endl;
+			//cout << "gene_trees: " << gene_trees.size() << endl;
+			//cout << "current_gene_trees: " << current_gene_trees.size() << endl;
 			if (SIMPLE_UNROOTED) {
 				if (REROOT) {
 					cout << "rerooting super_tree" << endl;
@@ -1725,13 +1733,13 @@ TODO:
 				cout << "finding approx best siblings" << endl;
 				vector<Node *> *best_siblings = find_best_siblings(super_tree,
 						current_gene_trees, label->second, APPROX_SIBLINGS);
-				cout << "finding best sibling from " << best_siblings->size() << endl;
+				//cout << "finding best sibling from " << best_siblings->size() << endl;
 				best_sibling = find_best_sibling(super_tree,
 						current_gene_trees, best_siblings, label->second);
 				delete best_siblings;
 			}
 			else {
-				cout << "finding best sibling" << endl;
+				//cout << "finding best sibling" << endl;
 				best_sibling = find_best_sibling(super_tree,
 						current_gene_trees, label->second);
 			}
@@ -1741,7 +1749,7 @@ TODO:
 	
 			node->add_child(new Node(itos(label->second)));
 			super_tree->numbers_to_labels(&reverse_label_map);
-			cout << super_tree->str_subtree() << endl;
+			//cout << super_tree->str_subtree() << endl;
 			super_tree->labels_to_numbers(&label_map, &reverse_label_map);
 		}
 
@@ -1923,7 +1931,7 @@ TODO:
 			for(int i = 0; i < gene_trees.size(); i++) {
 				cout << gene_tree_names[i];
 				gene_trees[i]->numbers_to_labels(&reverse_label_map);
-				cout << gene_trees[i]->str_subtree() << endl;
+				//cout << gene_trees[i]->str_subtree() << endl;
 				gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);
 			}
 			cleanup = true;
@@ -1941,16 +1949,61 @@ TODO:
 				gene_trees[i]->edge_preorder_interval();
 			}
 			add_transfers(&transfer_counts, super_tree, &gene_trees);
-#ifdef DEBUG_LGT
-			for(int i = 0; i < num_nodes; i++) {
-				for(int j = 0; j < num_nodes; j++) {
-					if (j > 0)
-						cout << " ";
-					cout << transfer_counts[i][j];
+
+			if (LGT_VISUALIZATION){
+
+				// Create output file "visualization_data_<data and time>"
+				time_t t = std::time(0);   // get time now
+				struct tm * now = localtime( & t );
+				char buffer [80];
+				strftime (buffer,80,"visualization_data_%Y-%m-%d_%H-%M-%S.",now);
+				std::ofstream myfile;
+				myfile.open(buffer);
+				if(myfile.is_open())
+				{			
+					cout << "{" << endl; // json begin
+						bool first_node = true;
+						cout << "\"supertree_nodes\":{";
+							for(int i = 0; i < num_nodes; i++) {
+								if (first_node){
+									cout << endl;
+									first_node = false;
+								}else{
+									cout << "," << endl;
+								}
+								cout << "\"" << i << "\":{";
+
+									//internal nodes' trees_ids = intersection of children's trees_ids
+									cout << "\"trees_ids\":[]" << endl; 
+
+								cout << "}" << endl;
+							}
+						cout << "}," << endl; // end supertree nodes
+						
+						cout << "\"lateral_transfers\":{";						
+							bool first_lt = true;	
+							for(int i = 0; i < num_nodes; i++) {
+								for(int j = 0; j < num_nodes; j++) {
+									if (transfer_counts[i][j] > 0){
+										if (first_lt){
+											cout << endl;
+											first_lt = false;
+										}else{
+											cout << "," << endl;
+										}
+										cout << "{";
+										cout << "\"source\":" << i << "," ;
+										cout << "\"target\":" << j << ",";
+										cout << "\"rspr_lt_count\"" << transfer_counts[i][j];
+										cout << "}" << endl;
+									}								
+								}
+							}
+						cout << "}" << endl; // end lgts			
+					cout << "}" << endl; //json end
 				}
-				cout << endl;
+				myfile.close();
 			}
-#endif
 
 			if (LGT_GROUPS != "") {
 				ifstream lgt_group_file;
@@ -2530,7 +2583,7 @@ TODO:
 						super_tree->normalize_support();
 						cout << endl;
 						super_tree->numbers_to_labels(&reverse_label_map);
-						cout << super_tree->str_subtree() << endl;
+						//cout << super_tree->str_subtree() << endl;
 						super_tree->labels_to_numbers(&label_map, &reverse_label_map);
 						for(int i = 0; i < gene_trees.size(); i++) {
 							original_scores[i] = original_scores_temp[i];
