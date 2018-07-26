@@ -1950,7 +1950,7 @@ TODO:
 			// stores all the trees (index) that are associated to each transfer
 			vector<vector<set<int>>> trees_ids =
 				vector<vector<set<int>>>(num_nodes, vector<set<int>>(num_nodes, set<int>()));
-
+			
 			for(int i = 0; i < gene_trees.size(); i++) {
 				gene_trees[i]->preorder_number();
 				gene_trees[i]->edge_preorder_interval();
@@ -1973,6 +1973,22 @@ TODO:
 			// build json file with edges, nodes, attributes
 			if(json.is_open()){			
 				json << "{" << endl; // json begin
+					json << "\"trees_newick\":[";
+					for(int i = 0; i < gene_trees.size()-1; i++) {
+						gene_trees[i]->numbers_to_labels(&reverse_label_map);						
+						json << "\""<< gene_trees[i]->str_subtree() << "\",";
+						gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);			
+					}
+					
+					gene_trees[gene_trees.size()-1]->numbers_to_labels(&reverse_label_map);	
+					json << "\"" << gene_trees[gene_trees.size()-1]->str_subtree()  << "\"],";
+					gene_trees[gene_trees.size()-1]->labels_to_numbers(&label_map, &reverse_label_map);	
+
+
+					super_tree->numbers_to_labels(&reverse_label_map);	
+					json << "\"supertree_newick\":\"" << super_tree->str_subtree() << "\",";
+					super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
+
 					bool first_node = true;
 					json << "\"supertree_nodes\":[";
 						for(int i = 0; i < num_nodes; i++) {
