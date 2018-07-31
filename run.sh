@@ -1,1 +1,1 @@
-./spr_supertree -lgt_visualization -i 0 -initial_tree ./tests/SPR-MRP-Rooting.tree < ./tests/MRP_rooted_only399.trees
+./spr_supertree -allow_multi -lgt_visualization -initial_tree ./tests/SPR_MRP_Rooting.tre -i 0 < ./tests/MRP_rooted_700.trees

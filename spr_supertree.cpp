@@ -496,7 +496,11 @@ void find_best_spr_helper(Node *n, Node *new_sibling, Node *super_tree,
 bool sort_approx_moves(const pair<pair<Node*,Node*>, int> &a, const pair<pair<Node*,Node*>, int> &b);
 int find_r();
 int find_r(double probability);
+
+// ----- begin visualization functions -----
 void genesIntersectionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node);
+void genesUnionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node);
+// ----- end visualization functions -----
 
 void find_best_distance(Node * n, Node * super_tree, vector<Node *> &gene_trees, vector< pair<Node*, int> > &scores, int &num_zeros, int &best_distance);
 //void find_best_distance_helper(Node *n, Forest *f, vector<Node *> &gene_trees, vector< pair<Node *, int> > &scores);
@@ -1454,7 +1458,7 @@ TODO:
 	//		cout << " (" << reverse_label_map.find(label->second)->second << ") ";
 	//		cout << ": " << label->first << endl;
 	//	}
-		if (INITIAL_SUPER_TREE != "") {
+		if (INITIAL_SUPER_TREE != "") {			
 			ifstream super_tree_file;
 			super_tree_file.open(INITIAL_SUPER_TREE.c_str());
 			if (super_tree_file.is_open()) {
@@ -1462,7 +1466,7 @@ TODO:
 				if(super_tree_file.good()) {
 					getline(super_tree_file, line);
 					if (INITIAL_SUPER_TREE_UNROOTED)
-						line = root(line);
+						line = root(line);						
 					if (INCLUDE_ONLY != "")
 						super_tree = build_tree(line, &include_only);
 					else
@@ -1471,9 +1475,11 @@ TODO:
 					super_tree->labels_to_numbers(&label_map, &reverse_label_map);
 				}
 				super_tree_file.close();
-			}
-			else
+				cout << "Supertree was read from file." << endl;				
+			}else{
+				cout << "Supertree could not be read from file. A new supertree will be created." << endl;
 				INITIAL_SUPER_TREE = "";
+			}
 		}
 		if (INITIAL_SUPER_TREE == "") {
 	
@@ -1967,35 +1973,61 @@ TODO:
 			vector<set<int>> genes_intersection = vector<set<int>>(num_nodes, set<int>());
 			vector<set<int>> genes_union = vector<set<int>>(num_nodes, set<int>());
 
-			vector<Node *> leaves = super_tree->find_leaves();
-			for(int i = 0; i < leaves.size(); i++) {
-				Node* leaf = leaves[i];				
-				for(int j = 0; j < gene_trees.size(); j++) {
-					if(gene_trees[j]->contains_leaf(leaf->get_name_num())){
-						genes_from_leaf[i].insert(j);
+			vector<Node *> super_tree_leaves = super_tree->find_leaves();
 
-// #ifdef DEBUG_VIS
-						// super_tree->numbers_to_labels(&reverse_label_map);	
-						// cout << "supertree leaf name: " << leaf->get_name() << endl;
-						// super_tree->labels_to_numbers(&label_map, &reverse_label_map);
+			for(int i = 0; i < gene_trees.size(); i++) {
+				vector<Node *> leaves = gene_trees[i]->find_leaves();
 
-						// gene_trees[j]->numbers_to_labels(&reverse_label_map);	
-						// cout << gene_trees[j]->str_subtree() << endl;
-						// gene_trees[j]->labels_to_numbers(&label_map, &reverse_label_map);
-// #endif						
-					}
-				}				
+				for(int j = 0; j < leaves.size(); j++) {
+					int leaf_idx = leaves[j]->get_name_num();
+					genes_from_leaf[leaf_idx].insert(i);
+				}
 			}
 
+ #ifdef DEBUG_VIS
+
+			cout << "========= gene trees sizes ========";
+			for(int i = 0; i < gene_trees.size(); i++) {
+				cout << gene_trees[i]->find_leaves().size() << " ";				
+			}
+			cout << endl;
+
+			for(int i = 0; i < genes_from_leaf.size(); i++){
+				if (genes_from_leaf[i].size()>0){
+					cout << "Leaf " << i << ": " << genes_from_leaf[i].size() << endl;
+				}
+			}
+
+			cout << "Number of genes considered: " << gene_trees.size() << endl;
+			cout << "Number of leaves in supertree: "<< super_tree->find_leaves().size() << endl;
+			cout << "Number of nodes in supertree: " << num_nodes << endl;
+
+							// super_tree->numbers_to_labels(&reverse_label_map);	
+							// cout << "supertree leaf name: " << leaf->get_name() << endl;
+							// super_tree->labels_to_numbers(&label_map, &reverse_label_map);
+
+							// gene_trees[j]->numbers_to_labels(&reverse_label_map);	
+							// cout << gene_trees[j]->str_subtree() << endl;
+							// gene_trees[j]->labels_to_numbers(&label_map, &reverse_label_map);
+#endif						
+
 			genesIntersectionInSupertree(&genes_intersection, &genes_from_leaf, super_tree);
+			genesUnionInSupertree(&genes_union, &genes_from_leaf, super_tree);
 
 #ifdef DEBUG_VIS					
 			for (int i = 0; i < genes_intersection.size(); i++){
-				for (auto it = genes_intersection[i].begin(); 
-				it != genes_intersection[i].end(); 
-				it++){
+				
+				cout << "intersection: ";
+				
+				for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
 					cout << *it << " ";
-				}	
+				}
+
+				cout << endl << "union: ";
+				
+				for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
+					cout << *it << " ";
+				}
 				cout << endl << "-------------" << endl;
 			}
 #endif	
@@ -4341,38 +4373,60 @@ bool pair_comparator (pair<int, int> a, pair<int, int> b) {
 }
 
 void genesIntersectionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node){
-		if (node == NULL){
-			return;
-		}
-
-		if(node->is_leaf()){
-			(*genes_nodes)[node->get_preorder_number()] = (*genes_leaf)[node->get_preorder_number()];			
-			return;
-		}
-
-		list<Node *>::iterator c;				
-		for(c = node->get_children().begin(); c != node->get_children().end(); c++) {			
-			genesIntersectionInSupertree(genes_nodes, genes_leaf, *c);
-		}
-		
-		set<int> intersect;
-		for(c = node->get_children().begin(); c != node->get_children().end(); c++) {			
-			set<int> child_set = (*genes_nodes)[(*c)->get_preorder_number()];
-			if (intersect.size() == 0){				
-				set_intersection(child_set.begin(), child_set.end(), child_set.begin(), child_set.end(), inserter(intersect,intersect.begin()));
-			}else{
-				set_intersection(intersect.begin(),intersect.end(), child_set.begin(), child_set.end(), inserter(intersect,intersect.begin()));
-			}
-// #ifdef DEBUG_VIS					
-// 			for (auto it = intersect.begin(); it != intersect.end(); it++){
-// 				cout << *it << " ";
-// 			}
-// 			cout << endl << "-------------" << endl;
-// #endif	
-			(*genes_nodes)[(*c)->get_preorder_number()] = intersect;
-		}
-
-					
-
+	if(node->is_leaf()){
+		set<int> leaf_genes = (*genes_leaf)[node->get_preorder_number()];
+		(*genes_nodes)[node->get_preorder_number()] = set<int>(leaf_genes.begin(), leaf_genes.end());
 		return;
-}
+	}
+
+	list<Node *>::iterator c;				
+	for(c = node->get_children().begin(); c != node->get_children().end(); c++) {			
+		genesIntersectionInSupertree(genes_nodes, genes_leaf, *c);
+	}
+	
+	set<int> intersect = set<int>();
+	for(c = node->get_children().begin(); c != node->get_children().end(); c++) {				
+		// create a copy of intersect
+		set<int> temp_intersect(intersect.begin(), intersect.end());	
+		set<int> child_set = (*genes_nodes)[(*c)->get_preorder_number()];		
+		
+		if (child_set.size() == 0){ // if one child has no gene, intersection is empty
+			intersect.clear();
+			break;
+		}
+
+		// if child_set.size > 0
+		if (intersect.size() == 0){	// if is the first child being read and is not empty, just copy
+			intersect = set<int>(child_set.begin(), child_set.end());
+		}else{
+			set_intersection(temp_intersect.begin(), temp_intersect.end(), child_set.begin(), child_set.end(), inserter(intersect, intersect.begin()));
+		}		
+	}
+	(*genes_nodes)[node->get_preorder_number()] = intersect;
+	return;
+} // end genesIntersectionInSupertree
+
+
+void genesUnionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node){
+	if(node->is_leaf()){
+		set<int> leaf_genes = (*genes_leaf)[node->get_preorder_number()];
+		(*genes_nodes)[node->get_preorder_number()] = set<int>(leaf_genes.begin(), leaf_genes.end());
+		return;
+	}
+
+	list<Node *>::iterator c;				
+	for(c = node->get_children().begin(); c != node->get_children().end(); c++) {			
+		genesUnionInSupertree(genes_nodes, genes_leaf, *c);
+	}
+	
+	set<int> genes_union;
+	for(c = node->get_children().begin(); c != node->get_children().end(); c++) {			
+		set<int> child_set = (*genes_nodes)[(*c)->get_preorder_number()];
+
+		for(auto gene = child_set.begin(); gene != child_set.end(); gene++){
+			genes_union.insert(*gene);
+		}
+	}
+	(*genes_nodes)[node->get_preorder_number()] = genes_union;
+	return;
+} // end genesUnionInSupertree
