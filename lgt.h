@@ -86,7 +86,7 @@ void show_moves(Node *T1, Node *T2, map<string, int> *label_map,
 		map<int, string> *reverse_label_map);
 
 
-// ---- begin add transfers for visualization
+// @heberleh ---- begin add transfers for visualization
 
 void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Node *super_tree, vector<Node *> *gene_trees) {
 	#pragma omp parallel for
@@ -127,6 +127,8 @@ void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>
 	}
 }
 //------------- end add transfers for visualization
+
+
 
 void add_transfers(vector<vector<int> > *transfer_counts, Node *super_tree,
 		vector<Node *> *gene_trees) {

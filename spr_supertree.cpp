@@ -145,6 +145,7 @@ LGT ANALYSIS
 
 -lgt_visualization	   Output the LGT analysis data to be visualized using the 
 																		? VISUALIZATION SYSTEM
+			           If -lgt_visualization is set, other types of analysis will be ignored.
 
 -lgt_csv               Output the LGT analysis seperated by commas rather than
                        spaces.
@@ -1477,8 +1478,10 @@ TODO:
 				super_tree_file.close();
 				cout << "Supertree was read from file." << endl;				
 			}else{
-				cout << "Supertree could not be read from file. A new supertree will be created." << endl;
-				INITIAL_SUPER_TREE = "";
+				cout << "The parameter -initial_tree was set but the file could not be read. Please check: " << INITIAL_SUPER_TREE << endl;
+				return -1;
+				/*@heberleh: added the above message and return in case the filename is wrong or the supertree file does not exist. Is the bellow code associated to some other logic of the system? If not, remove it.*/
+				INITIAL_SUPER_TREE = ""; 
 			}
 		}
 		if (INITIAL_SUPER_TREE == "") {
@@ -1945,9 +1948,12 @@ TODO:
 		}
 
 
-
+/*@heberleh - Organazing and exporting Json file for visualization*/
 		if (LGT_VISUALIZATION){
-			cout << "LGT Analysis" << endl;
+			cout << endl << endl << endl<< "==== Building Visualization Data ===" << endl << endl;
+
+			set<int> test;
+			cout << "The maximum number of elements for a set " << test.max_size() << endl;
 			super_tree->preorder_number();
 			super_tree->edge_preorder_interval();
 			int num_nodes = super_tree->size();
@@ -1958,15 +1964,18 @@ TODO:
 			// stores all the trees (index) that are associated to each transfer
 			vector<vector<set<int>>> trees_ids =
 				vector<vector<set<int>>>(num_nodes, vector<set<int>>(num_nodes, set<int>()));
-			
+						
 			for(int i = 0; i < gene_trees.size(); i++) {
 				gene_trees[i]->preorder_number();
 				gene_trees[i]->edge_preorder_interval();
 			}
+			cout << "Preorder indexes are ready." << endl;
 
+			cout << "Computing lateral transfers." << endl;
 			// update counts of transfers and sets of genes/trees that made them sum up
 			// update trees_ids  and  transfer_counts
 			add_transfers(&transfer_counts, &trees_ids, super_tree, &gene_trees);	
+			cout << "Lateral transfers identified." << endl;
 
 			// populate supertree genes (union and intersection) data structure
 			vector<set<int>> genes_from_leaf = vector<set<int>>(num_nodes, set<int>());
@@ -1983,20 +1992,21 @@ TODO:
 					genes_from_leaf[leaf_idx].insert(i);
 				}
 			}
+			cout << "Genes of each leaf identified." << endl;
 
- #ifdef DEBUG_VIS
+    		#ifdef DEBUG_VIS
 
-			cout << "========= gene trees sizes ========";
-			for(int i = 0; i < gene_trees.size(); i++) {
-				cout << gene_trees[i]->find_leaves().size() << " ";				
-			}
-			cout << endl;
+			// cout << "========= gene trees sizes ========";
+			// for(int i = 0; i < gene_trees.size(); i++) {
+			// 	cout << gene_trees[i]->find_leaves().size() << " ";				
+			// }
+			// cout << endl;
 
-			for(int i = 0; i < genes_from_leaf.size(); i++){
-				if (genes_from_leaf[i].size()>0){
-					cout << "Leaf " << i << ": " << genes_from_leaf[i].size() << endl;
-				}
-			}
+			// for(int i = 0; i < genes_from_leaf.size(); i++){
+			// 	if (genes_from_leaf[i].size()>0){
+			// 		cout << "Leaf " << i << ": " << genes_from_leaf[i].size() << endl;
+			// 	}
+			// }
 
 			cout << "Number of genes considered: " << gene_trees.size() << endl;
 			cout << "Number of leaves in supertree: "<< super_tree->find_leaves().size() << endl;
@@ -2009,28 +2019,32 @@ TODO:
 							// gene_trees[j]->numbers_to_labels(&reverse_label_map);	
 							// cout << gene_trees[j]->str_subtree() << endl;
 							// gene_trees[j]->labels_to_numbers(&label_map, &reverse_label_map);
-#endif						
+    		#endif						
 
+			
 			genesIntersectionInSupertree(&genes_intersection, &genes_from_leaf, super_tree);
+			cout << "Intersercion of genes from children stored in each parent." << endl;
+
 			genesUnionInSupertree(&genes_union, &genes_from_leaf, super_tree);
+			cout << "Union of genes from children stored in each parent." << endl;
 
-#ifdef DEBUG_VIS					
-			for (int i = 0; i < genes_intersection.size(); i++){
+			#ifdef DEBUG_VIS					
+			// for (int i = 0; i < genes_intersection.size(); i++){
 				
-				cout << "intersection: ";
+			// 	cout << "intersection: ";
 				
-				for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
-					cout << *it << " ";
-				}
+			// 	for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
+			// 		cout << *it << " ";
+			// 	}
 
-				cout << endl << "union: ";
+			// 	cout << endl << "union: ";
 				
-				for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
-					cout << *it << " ";
-				}
-				cout << endl << "-------------" << endl;
-			}
-#endif	
+			// 	for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
+			// 		cout << *it << " ";
+			// 	}
+			// 	cout << endl << "-------------" << endl;
+			// }
+			#endif	
 
 			// Create output file "visualization_data_<data and time>"
 			cout << "Saving data for visualization." << endl;				
@@ -2072,16 +2086,37 @@ TODO:
 							}else{
 								json << "," << endl;
 							}
-							json << "{";
+							json << "{";								
+							
+								json << "\"genes_intersect\":["; 
+								bool first_gene = true;
+								for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
+									if(first_gene){
+										first_gene = false;
+									}else{
+										json << ",";
+									}
+									json << *it;
+								}
+								json << "],"<< endl;
 
-								//internal nodes' trees_ids = intersection of children's trees_ids
-								json << "\"trees_ids\":[]" << endl; 
+								json << "\"genes_union\":["; 
+								first_gene = true;
+								for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
+									if(first_gene){
+										first_gene = false;
+									}else{
+										json << ",";
+									}
+									json << *it;
+								}
+								json << "]"<< endl;
 
 							json << "}" << endl;
 						}
 					json << "]," << endl; // end supertree nodes
 					
-					json << "\"lateral_transfers\":[";						
+					json << "\"transfers\":[";						
 						bool first_lt = true;	
 						for(int i = 0; i < num_nodes; i++) {
 							for(int j = 0; j < num_nodes; j++) {
@@ -2095,9 +2130,9 @@ TODO:
 									json << "{";
 									json << "\"source\":" << i << "," ;
 									json << "\"target\":" << j << ",";
-									json << "\"rspr_lt_count\":" << transfer_counts[i][j] << ",";
-									json << "\"n_trees\":" << trees_ids[i][j].size() << ",";
-									json << "\"trees\":[";
+									json << "\"transf_count\":" << transfer_counts[i][j] << ",";
+									json << "\"n_genes\":" << trees_ids[i][j].size() << ",";
+									json << "\"genes_transf\":[";
 									bool first_gene = true;
 									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
 										if (first_gene){
@@ -2106,7 +2141,39 @@ TODO:
 											json << ",";
 										}
 										json << *it;
-									}        							
+									}
+									json << "]," << endl;
+
+									json << "\"common_genes_union\":[";
+									first_gene = true;
+									set<int> common_genes_union;
+
+									set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
+
+									for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "]," << endl;
+
+									json << "\"common_genes_intersection\":[";
+									first_gene = true;
+									set<int> common_genes_intersection;
+
+									set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
+
+									for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
 									json << "]}" << endl;
 								}
 							}
@@ -2116,8 +2183,12 @@ TODO:
 				}
 				json.close();
 				cout << "Data is saved:   "<< buffer << endl;
+				return 0;
 		}
 
+
+
+/* LGT Analysis */
 		if (LGT_ANALYSIS) {
 			cout << "LGT Analysis" << endl;
 			super_tree->preorder_number();
@@ -4372,6 +4443,8 @@ bool pair_comparator (pair<int, int> a, pair<int, int> b) {
 	return a.first > b.first;
 }
 
+
+/* @heberleh Compute intersection of genes from children, for each node */
 void genesIntersectionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node){
 	if(node->is_leaf()){
 		set<int> leaf_genes = (*genes_leaf)[node->get_preorder_number()];
@@ -4406,7 +4479,7 @@ void genesIntersectionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>
 	return;
 } // end genesIntersectionInSupertree
 
-
+/* @heberleh Compute union of genes from children, for each node */
 void genesUnionInSupertree(vector<set<int>> *genes_nodes, vector<set<int>> *genes_leaf, struct Node* node){
 	if(node->is_leaf()){
 		set<int> leaf_genes = (*genes_leaf)[node->get_preorder_number()];
