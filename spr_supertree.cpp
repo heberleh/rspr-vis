@@ -2046,176 +2046,11 @@ TODO:
 			// }
 			#endif	
 
-			// Create output file "visualization_data_<data and time>"
-			cout << "Saving data for visualization." << endl;				
-			time_t t = std::time(0);   // get time now
-			struct tm * now = localtime( & t );
-			char buffer [80];
-			strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
-			std::ofstream json;
-			json.open(buffer);
 
-			// build json file with edges, nodes, attributes
-			if(json.is_open()){			
-				json << "{" << endl; // json begin
-					json << "\"trees_newick\":[";
-					for(int i = 0; i < gene_trees.size()-1; i++) {
-						gene_trees[i]->numbers_to_labels(&reverse_label_map);						
-						json << "\""<< gene_trees[i]->str_subtree() << "\",";
-						gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);			
-					}
-
-										
-					gene_trees[gene_trees.size()-1]->numbers_to_labels(&reverse_label_map);	
-					json << "\"" << gene_trees[gene_trees.size()-1]->str_subtree()  << "\"],";
-					gene_trees[gene_trees.size()-1]->labels_to_numbers(&label_map, &reverse_label_map);	
-
-
-					super_tree->numbers_to_labels(&reverse_label_map);	
-					json << "\"supertree_newick\":\"" << super_tree->str_subtree() << "\",";
-					super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
-					
-
-
-					bool first_node = true;
-					json << "\"supertree_nodes\":[";
-						for(int i = 0; i < num_nodes; i++) {
-							if (first_node){
-								json << endl;
-								first_node = false;
-							}else{
-								json << "," << endl;
-							}
-							json << "{";								
-							
-								json << "\"genes_intersect\":["; 
-								bool first_gene = true;
-								for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
-									if(first_gene){
-										first_gene = false;
-									}else{
-										json << ",";
-									}
-									json << *it;
-								}
-								json << "],"<< endl;
-
-								json << "\"genes_union\":["; 
-								first_gene = true;
-								for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
-									if(first_gene){
-										first_gene = false;
-									}else{
-										json << ",";
-									}
-									json << *it;
-								}
-								json << "]"<< endl;
-
-							json << "}" << endl;
-						}
-					json << "]," << endl; // end supertree nodes
-					
-					json << "\"transfers\":[";						
-						bool first_lt = true;	
-						for(int i = 0; i < num_nodes; i++) {
-							for(int j = 0; j < num_nodes; j++) {
-								if (transfer_counts[i][j] > 0){
-									if (first_lt){
-										json << endl;
-										first_lt = false;
-									}else{
-										json << "," << endl;
-									}
-									json << "{";
-									json << "\"source\":" << i << "," ;
-									json << "\"target\":" << j << ",";
-									json << "\"transf_count\":" << transfer_counts[i][j] << ",";
-									json << "\"n_genes\":" << trees_ids[i][j].size() << ",";
-									json << "\"genes_transf\":[";
-									bool first_gene = true;
-									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
-										if (first_gene){
-											first_gene = false;
-										}else{
-											json << ",";
-										}
-										json << *it;
-									}
-									json << "]," << endl;
-
-									json << "\"common_genes_union\":[";
-									first_gene = true;
-									set<int> common_genes_union;
-
-									set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
-
-									for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
-										if (first_gene){
-											first_gene = false;
-										}else{
-											json << ",";
-										}
-										json << *it;
-									}
-									json << "]," << endl;
-
-									json << "\"common_genes_intersection\":[";
-									first_gene = true;
-									set<int> common_genes_intersection;
-
-									set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
-
-									for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
-										if (first_gene){
-											first_gene = false;
-										}else{
-											json << ",";
-										}
-										json << *it;
-									}
-									json << "]}" << endl;
-								}
-							}
-						}
-					json << "]" << endl; // end lts			
-				json << "}" << endl; //json end
-				}
-				json.close();
-				cout << "Data is saved:   "<< buffer << endl;
-				return 0;
-		}
-
-
-
-/* LGT Analysis */
-		if (LGT_ANALYSIS) {
-			cout << "LGT Analysis" << endl;
-			super_tree->preorder_number();
-			super_tree->edge_preorder_interval();
-			int num_nodes = super_tree->size();
-			vector<vector<int> > transfer_counts =
-				vector<vector<int> >(num_nodes, vector<int>(num_nodes, 0));
-			for(int i = 0; i < gene_trees.size(); i++) {
-				gene_trees[i]->preorder_number();
-				gene_trees[i]->edge_preorder_interval();
-			}
-			add_transfers(&transfer_counts, super_tree, &gene_trees);
-#ifdef DEBUG_LGT
-			for(int i = 0; i < num_nodes; i++) {
-				for(int j = 0; j < num_nodes; j++) {
-					if (j > 0)
-						cout << " ";
-					cout << transfer_counts[i][j];
-				}
-				cout << endl;
-			}
-#endif			
-
+			vector<int> pre_to_group = vector<int>(num_nodes, 0);
 			if (LGT_GROUPS != "") {
 				ifstream lgt_group_file;
-				lgt_group_file.open(LGT_GROUPS.c_str());
-				vector<int> pre_to_group = vector<int>(num_nodes, 0);
+				lgt_group_file.open(LGT_GROUPS.c_str());				
 				vector<string> group_names = vector<string>();
 				map<string, int> name_to_pre = map<string, int>();
 				super_tree->numbers_to_labels(&reverse_label_map);
@@ -2242,20 +2077,20 @@ TODO:
 							map<string, int>::iterator i = name_to_pre.find(line);
 							if (i != name_to_pre.end()) {
 								int pre = i->second;
-#ifdef DEBUG_LGT
-								cout << pre << ": " << line << endl;
-								cout << "group " << group_num << endl;
+#ifdef DEBUG_VIS
+								// cout << pre << ": " << line << endl;
+								// cout << "group " << group_num << endl;
 #endif
 								pre_to_group[pre] = group_num;
 							}
 						}
 					}
-#ifdef DEBUG_LGT
+#ifdef DEBUG_VIS
 					cout << endl;
 
-					for(int i = 0; i < num_nodes; i++) {
-						cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
-					}
+					// for(int i = 0; i < num_nodes; i++) {
+					// 	cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
+					// }
 #endif
 
 					// add LCAs to groups
@@ -2266,10 +2101,10 @@ TODO:
 					// * in pre order
 					// * match parent group (or this is the root)
 
-#ifdef DEBUG_LGT
-					for(int i = 0; i < num_nodes; i++) {
-						cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
-					}
+#ifdef DEBUG_VIS
+					// for(int i = 0; i < num_nodes; i++) {
+					// 	cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
+					// }
 #endif
 
 
@@ -2370,10 +2205,418 @@ TODO:
 					}
 					cout << endl;
 					lgt_group_file.close();
+				}else{
+					cout << "The parameter -lgt_groups was set but the file could not be read. Please check: " << LGT_GROUPS << endl;
+					return -1;
+					/*@heberleh: added the above message and return in case the filename is wrong or the groups file does not exist. Is the bellow code associated to some other logic of the system? If not, remove it.*/
+					LGT_GROUPS = "";
 				}
-			else
-				LGT_GROUPS = "";
+					
+			} // end if LGT_GROUPS
+
+			// Create output file "visualization_data_<data and time>"
+			cout << "Saving data for visualization." << endl;				
+			time_t t = std::time(0);   // get time now
+			struct tm * now = localtime( & t );
+			char buffer [80];
+			strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
+			std::ofstream json;
+			json.open(buffer);
+
+			// build json file with edges, nodes, attributes
+			if(json.is_open()){			
+				json << "{" << endl; // json begin
+					json << "\"trees_newick\":[";
+					for(int i = 0; i < gene_trees.size()-1; i++) {
+						gene_trees[i]->numbers_to_labels(&reverse_label_map);						
+						json << "\""<< gene_trees[i]->str_subtree() << "\",";
+						gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);			
+					}
+
+										
+					gene_trees[gene_trees.size()-1]->numbers_to_labels(&reverse_label_map);	
+					json << "\"" << gene_trees[gene_trees.size()-1]->str_subtree()  << "\"],";
+					gene_trees[gene_trees.size()-1]->labels_to_numbers(&label_map, &reverse_label_map);	
+
+
+					super_tree->numbers_to_labels(&reverse_label_map);	
+					json << "\"supertree_newick\":\"" << super_tree->str_subtree() << "\",";
+					super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
+					
+
+
+					bool first_node = true;
+					json << "\"supertree_nodes\":[";
+						for(int i = 0; i < num_nodes; i++) {
+							if (first_node){
+								json << endl;
+								first_node = false;
+							}else{
+								json << "," << endl;
+							}
+							json << "{";								
+							
+								json << "\"genes_intersect\":["; 
+								bool first_gene = true;
+								for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
+									if(first_gene){
+										first_gene = false;
+									}else{
+										json << ",";
+									}
+									json << *it;
+								}
+								json << "],"<< endl;
+
+								json << "\"genes_union\":["; 
+								first_gene = true;
+								for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
+									if(first_gene){
+										first_gene = false;
+									}else{
+										json << ",";
+									}
+									json << *it;
+								}
+								json << "]"<< endl;
+
+							json << "}" << endl;
+						}
+					json << "]," << endl; // end supertree nodes
+					
+					int n_transfers = 0;
+					int n_non_transfers = 0;
+					json << "\"transfers\":[";						
+						bool first_lt = true;	
+						for(int i = 0; i < num_nodes; i++) {							
+							for(int j = 0; j < num_nodes; j++) {
+								if (transfer_counts[i][j] > 0){									
+									n_transfers++;
+									if (first_lt){
+										json << endl;
+										first_lt = false;
+									}else{
+										json << "," << endl;
+									}
+									json << "{";
+									json << "\"source\":" << i << "," ;
+									json << "\"target\":" << j << ",";
+									json << "\"type\":" << "\"rspr_shift\"" << ",";
+									json << "\"transf_count\":" << transfer_counts[i][j] << ",";
+									json << "\"n_genes\":" << trees_ids[i][j].size() << ",";
+									json << "\"genes_transf\":[";
+									bool first_gene = true;
+									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "]," << endl;
+
+									json << "\"common_genes_union\":[";
+									first_gene = true;
+									set<int> common_genes_union;
+
+									set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
+
+									for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "]," << endl;
+
+									json << "\"common_genes_intersection\":[";
+									first_gene = true;
+									set<int> common_genes_intersection;
+
+									set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
+
+									for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
+										if (first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "]}" << endl;
+								}else{
+									if (LGT_GROUPS != ""){			
+										if(pre_to_group[i] != pre_to_group[j]){
+											set<int> common_genes_intersection;
+
+											set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
+
+											if (common_genes_intersection.size() > 0){
+												n_non_transfers++;
+												if (first_lt){
+													json << endl;
+													first_lt = false;
+												}else{
+													json << "," << endl;
+												}
+												json << "{";
+												json << "\"source\":" << i << "," ;
+												json << "\"target\":" << j << ",";
+												json << "\"type\":" << "\"common_genes\"" << ",";
+												json << "\"transf_count\": 0,";
+												json << "\"n_genes\": "<< common_genes_intersection.size() <<",";
+												json << "\"genes_transf\":[";
+												bool first_gene = true;
+												
+												for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
+													if (first_gene){
+														first_gene = false;
+													}else{
+														json << ",";
+													}
+													json << *it;
+												}
+												json << "]," << endl;
+
+												json << "\"common_genes_union\":[";
+												first_gene = true;
+												set<int> common_genes_union;
+
+												set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
+
+												for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
+													if (first_gene){
+														first_gene = false;
+													}else{
+														json << ",";
+													}
+													json << *it;
+												}
+												json << "]," << endl;
+
+												json << "\"common_genes_intersection\":[";
+												first_gene = true;
+												
+												for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
+													if (first_gene){
+														first_gene = false;
+													}else{
+														json << ",";
+													}
+													json << *it;
+												}
+												json << "]}" << endl;
+											}
+										}
+									}
+								}
+							}
+						}
+					json << "]" << endl; // end lts			
+				json << "}" << endl; //json end
+				cout << "Number of transfers: " << n_transfers << endl;
+				cout << "Number of common-genes edges: " << n_non_transfers << endl;
+				}
+				json.close();
+				cout << "Data is saved:   "<< buffer << endl;
+				
+				return 0;
+		}
+
+
+
+/* LGT Analysis */
+		if (LGT_ANALYSIS) {
+			cout << "LGT Analysis" << endl;
+			super_tree->preorder_number();
+			super_tree->edge_preorder_interval();
+			int num_nodes = super_tree->size();
+			vector<vector<int> > transfer_counts =
+				vector<vector<int> >(num_nodes, vector<int>(num_nodes, 0));
+			for(int i = 0; i < gene_trees.size(); i++) {
+				gene_trees[i]->preorder_number();
+				gene_trees[i]->edge_preorder_interval();
 			}
+			add_transfers(&transfer_counts, super_tree, &gene_trees);
+#ifdef DEBUG_LGT
+			for(int i = 0; i < num_nodes; i++) {
+				for(int j = 0; j < num_nodes; j++) {
+					if (j > 0)
+						cout << " ";
+					cout << transfer_counts[i][j];
+				}
+				cout << endl;
+			}
+#endif			
+
+			if (LGT_GROUPS != "") {
+				ifstream lgt_group_file;
+				lgt_group_file.open(LGT_GROUPS.c_str());
+				vector<int> pre_to_group = vector<int>(num_nodes, 0);
+				vector<string> group_names = vector<string>();
+				map<string, int> name_to_pre = map<string, int>();
+				super_tree->numbers_to_labels(&reverse_label_map);
+				super_tree->build_name_to_pre_map(&name_to_pre);
+				super_tree->labels_to_numbers(&label_map, &reverse_label_map);
+				group_names.push_back("Mixed");
+				if (lgt_group_file.is_open()) {
+					string line;
+					bool new_group = true;
+					int group_num = 0;
+					while(lgt_group_file.good()) {
+						getline(lgt_group_file, line);
+						// finish group
+						if (line == "")
+							new_group = true;
+						// new group
+						else if (new_group) {
+							group_names.push_back(line);
+							group_num++;
+							new_group = false;
+						}
+						// add to group
+						else {
+							map<string, int>::iterator i = name_to_pre.find(line);
+							if (i != name_to_pre.end()) {
+								int pre = i->second;
+#ifdef DEBUG_LGT
+								cout << pre << ": " << line << endl;
+								cout << "group " << group_num << endl;
+#endif
+								pre_to_group[pre] = group_num;
+							}
+						}
+					}
+#ifdef DEBUG_LGT
+					cout << endl;
+
+					for(int i = 0; i < num_nodes; i++) {
+						cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
+					}
+#endif
+
+					// add LCAs to groups
+					add_lcas_to_groups(&pre_to_group, super_tree);
+
+					// TODO: backfill polytomies
+					// * look at children and grandchildren of a 0 group node
+					// * in pre order
+					// * match parent group (or this is the root)
+
+#ifdef DEBUG_LGT
+					for(int i = 0; i < num_nodes; i++) {
+						cout << pre_to_group[i] << ": " << super_tree->find_by_prenum(i)->str_subtree() << endl;
+					}
+#endif
+
+					cout << "INFERRED SPRS" << endl;
+					if (LGT_CSV)
+						cout << ",";
+					for(int i = 0; i < group_names.size(); i++) {
+						cout << group_names[i];
+						if (LGT_CSV && (i + 1 < group_names.size())) {
+							cout << ",";
+						}
+						else
+							cout << endl;
+					}
+
+					int num_group_nodes = group_names.size();
+					vector<vector<int> > group_transfer_counts =
+							vector<vector<int> >(num_group_nodes,
+							vector<int>(num_group_nodes, 0));
+
+					for(int i = 0; i < num_nodes; i++) {
+						for(int j = 0; j < num_nodes; j++) {
+							group_transfer_counts[pre_to_group[i]][pre_to_group[j]]
+								+= transfer_counts[i][j];
+						}
+					}
+					if (!LGT_CSV)
+						cout << endl;
+					for(int i = 0; i < num_group_nodes; i++) {
+						if (LGT_CSV)
+							cout << group_names[i] << ",";
+						for(int j = 0; j < num_group_nodes; j++) {
+							cout << group_transfer_counts[i][j];
+							if (j + 1 < group_names.size()) {
+								if (LGT_CSV)
+									cout << ",";
+								else
+									cout << " ";
+							}
+						}
+						cout << endl;
+					}
+					cout << endl;
+					// NOTE: these are inferred SPRs
+					//       transfers are transposed
+					cout << "INFERRED TRANSFERS" << endl;
+					if (LGT_CSV)
+						cout << ",";
+					for(int i = 0; i < group_names.size(); i++) {
+						cout << group_names[i];
+						if (LGT_CSV && (i + 1 < group_names.size())) {
+							cout << ",";
+						}
+						else cout << endl; }
+					if (!LGT_CSV)
+						cout << endl;
+					for(int j = 0; j < num_group_nodes; j++) {
+						if (LGT_CSV)
+							cout << group_names[j] << ",";
+						for(int i = 0; i < num_group_nodes; i++) {
+							cout << group_transfer_counts[i][j];
+							if (i + 1 < group_names.size()) {
+								if (LGT_CSV)
+									cout << ",";
+								else
+									cout << " ";
+							}
+						}
+						cout << endl;
+					}
+					cout << endl;
+
+					cout << "NONDIRECTIONAL TRANSFERS" << endl;
+					if (LGT_CSV)
+						cout << ",";
+					for(int i = 0; i < group_names.size(); i++) {
+						cout << group_names[i];
+						if (LGT_CSV && (i + 1 < group_names.size())) {
+							cout << ",";
+						}
+						else cout << endl; }
+					if (!LGT_CSV)
+						cout << endl;
+					for(int j = 0; j < num_group_nodes; j++) {
+						if (LGT_CSV)
+							cout << group_names[j] << ",";
+						for(int i = 0; i < num_group_nodes; i++) {
+							cout << group_transfer_counts[i][j]
+								+ (i == j ?  0 : group_transfer_counts[j][i]);
+							if (i + 1 < group_names.size()) {
+								if (LGT_CSV)
+									cout << ",";
+								else
+									cout << " ";
+							}
+						}
+						cout << endl;
+					}
+					cout << endl;
+					lgt_group_file.close();
+				}else{
+					cout << "The parameter -lgt_groups was set but the file could not be read. Please check: " << LGT_GROUPS << endl;
+					return -1;
+					/*@heberleh: added the above message and return in case the filename is wrong or the groups file does not exist. Is the bellow code associated to some other logic of the system? If not, remove it.*/
+					LGT_GROUPS = "";
+				}
+					
+			} // end if LGT_GROUPS
 			cleanup = true;
 		} // end if LGT_ANALYSIS
 
