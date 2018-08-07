@@ -2047,10 +2047,10 @@ TODO:
 
 
 			vector<int> pre_to_group = vector<int>(num_nodes, 0);
+			vector<string> group_names = vector<string>();
 			if (LGT_GROUPS != "") {
 				ifstream lgt_group_file;
-				lgt_group_file.open(LGT_GROUPS.c_str());				
-				vector<string> group_names = vector<string>();
+				lgt_group_file.open(LGT_GROUPS.c_str());								
 				map<string, int> name_to_pre = map<string, int>();
 				super_tree->numbers_to_labels(&reverse_label_map);
 				super_tree->build_name_to_pre_map(&name_to_pre);
@@ -2225,6 +2225,13 @@ TODO:
 			// build json file with edges, nodes, attributes
 			if(json.is_open()){			
 				json << "{" << endl; // json begin
+					json << "\"groups_names\":";
+					json << "[" << group_names[0];
+					for(int i = 1; i < group_names.size(); i++){
+						json << "," << group_names[i];
+					}
+					json << "],";
+
 					json << "\"trees_newick\":[";
 					for(int i = 0; i < gene_trees.size()-1; i++) {
 						gene_trees[i]->numbers_to_labels(&reverse_label_map);						
@@ -2255,6 +2262,12 @@ TODO:
 							}
 							json << "{";								
 							
+								if (LGT_GROUPS != ""){
+									json << "\"group\": undefined,";
+								}else{
+									json << "\"group\":" << pre_to_group[i] << endl;
+								}
+
 								json << "\"genes_intersect\":["; 
 								bool first_gene = true;
 								for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
