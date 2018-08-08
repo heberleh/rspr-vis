@@ -88,7 +88,7 @@ void show_moves(Node *T1, Node *T2, map<string, int> *label_map,
 
 // @heberleh ---- begin add transfers for visualization
 
-void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, Node *super_tree, vector<Node *> *gene_trees) {
+void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>>> *trees_ids, vector<int> *distances, Node *super_tree, vector<Node *> *gene_trees) {
 	#pragma omp parallel for
 	for(int i = 0; i < gene_trees->size(); i++) {
 		Forest *MAF1 = NULL;
@@ -96,7 +96,7 @@ void add_transfers(vector<vector<int> > *transfer_counts, vector<vector<set<int>
 		Forest F1 = Forest(super_tree);
 		Forest F2 = Forest((*gene_trees)[i]);
 		if (sync_twins(&F1,&F2)) {
-			int distance = rSPR_branch_and_bound_simple_clustering(F1.get_component(0), F2.get_component(0), &MAF1, &MAF2);
+			(*distances)[i] = rSPR_branch_and_bound_simple_clustering(F1.get_component(0), F2.get_component(0), &MAF1, &MAF2);
 			expand_contracted_nodes(MAF1);
 			expand_contracted_nodes(MAF2);
 			sync_af_twins(MAF1, MAF2);

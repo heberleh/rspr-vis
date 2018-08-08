@@ -1965,6 +1965,10 @@ TODO:
 			vector<vector<set<int>>> trees_ids =
 				vector<vector<set<int>>>(num_nodes, vector<set<int>>(num_nodes, set<int>()));
 						
+			//rspr distances: gene trees vs. supertree
+
+			vector<int> distances = vector<int>(gene_trees.size(), -1);
+
 			for(int i = 0; i < gene_trees.size(); i++) {
 				gene_trees[i]->preorder_number();
 				gene_trees[i]->edge_preorder_interval();
@@ -1974,7 +1978,7 @@ TODO:
 			cout << "Computing lateral transfers." << endl;
 			// update counts of transfers and sets of genes/trees that made them sum up
 			// update trees_ids  and  transfer_counts
-			add_transfers(&transfer_counts, &trees_ids, super_tree, &gene_trees);	
+			add_transfers(&transfer_counts, &trees_ids, &distances, super_tree, &gene_trees);	
 			cout << "Lateral transfers identified." << endl;
 
 			// populate supertree genes (union and intersection) data structure
@@ -2230,20 +2234,22 @@ TODO:
 					for(int i = 1; i < group_names.size(); i++){
 						json << "," << group_names[i];
 					}
-					json << "],";
+					json << "]," << endl;
 
 					json << "\"trees\":[";
 						for(int i = 0; i < gene_trees.size(); i++) {
 							if (i == 0){
 								json << "{";
 							}else{
-								json << ",{";
+								json << ","<< endl <<"{";
 							}														
 								json << "\"newick\":";
-								gene_trees[i]->numbers_to_labels(&reverse_label_map);					json << "\""<< gene_trees[i]->str_subtree() << "\",";
+								gene_trees[i]->numbers_to_labels(&reverse_label_map);					json << "\""<< gene_trees[i]->str_subtree() << "\"," << endl;
 								gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);
 								json << "\"attributes\":{";
-								// attributes ?
+									json << "\"function\":[\"abc\", \"def\"]," << endl;
+									json << "\"n_genomes\":" << gene_trees[i]->find_leaves().size() << "," << endl; 
+									json << "\"rspr_dist\":" << distances[i]; // distances vector is sync with gene vector indexing in the add_transfers function
 								json << "}"; // end attributes
 							json << "}";
 						}
