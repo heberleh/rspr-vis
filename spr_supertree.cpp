@@ -2232,70 +2232,76 @@ TODO:
 					}
 					json << "],";
 
-					json << "\"trees_newick\":[";
-					for(int i = 0; i < gene_trees.size()-1; i++) {
-						gene_trees[i]->numbers_to_labels(&reverse_label_map);						
-						json << "\""<< gene_trees[i]->str_subtree() << "\",";
-						gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);			
-					}
-
-										
-					gene_trees[gene_trees.size()-1]->numbers_to_labels(&reverse_label_map);	
-					json << "\"" << gene_trees[gene_trees.size()-1]->str_subtree()  << "\"],";
-					gene_trees[gene_trees.size()-1]->labels_to_numbers(&label_map, &reverse_label_map);	
-
-
-					super_tree->numbers_to_labels(&reverse_label_map);	
-					json << "\"supertree_newick\":\"" << super_tree->str_subtree() << "\",";
-					super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
-					
-
-
-					bool first_node = true;
-					json << "\"supertree_nodes\":[";
-						for(int i = 0; i < num_nodes; i++) {
-							if (first_node){
-								json << endl;
-								first_node = false;
+					json << "\"trees\":[";
+						for(int i = 0; i < gene_trees.size(); i++) {
+							if (i == 0){
+								json << "{";
 							}else{
-								json << "," << endl;
-							}
-							json << "{";								
-							
-								if (LGT_GROUPS != ""){
-									json << "\"group\": undefined,";
-								}else{
-									json << "\"group\":" << pre_to_group[i] << endl;
-								}
-
-								json << "\"genes_intersect\":["; 
-								bool first_gene = true;
-								for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
-									if(first_gene){
-										first_gene = false;
-									}else{
-										json << ",";
-									}
-									json << *it;
-								}
-								json << "],"<< endl;
-
-								json << "\"genes_union\":["; 
-								first_gene = true;
-								for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
-									if(first_gene){
-										first_gene = false;
-									}else{
-										json << ",";
-									}
-									json << *it;
-								}
-								json << "]"<< endl;
-
-							json << "}" << endl;
+								json << ",{";
+							}														
+								json << "\"newick\":";
+								gene_trees[i]->numbers_to_labels(&reverse_label_map);					json << "\""<< gene_trees[i]->str_subtree() << "\",";
+								gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);
+								json << "\"attributes\":{";
+								// attributes ?
+								json << "}"; // end attributes
+							json << "}";
 						}
-					json << "]," << endl; // end supertree nodes
+
+					json << "],"; // end trees
+
+					json << "\"supertree\":{";
+
+						super_tree->numbers_to_labels(&reverse_label_map);	
+						json << "\"newick\":\"" << super_tree->str_subtree() << "\",";
+						super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
 					
+						bool first_node = true;
+						json << "\"nodes\":[";
+							for(int i = 0; i < num_nodes; i++) {
+								if (first_node){
+									json << endl;
+									first_node = false;
+								}else{
+									json << "," << endl;
+								}
+								json << "{";								
+								
+									if (LGT_GROUPS != ""){
+										json << "\"group\": undefined,";
+									}else{
+										json << "\"group\":" << pre_to_group[i] << endl;
+									}
+
+									json << "\"genes_intersect\":["; 
+									bool first_gene = true;
+									for (auto it = genes_intersection[i].begin(); it != genes_intersection[i].end(); it++){
+										if(first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "],"<< endl;
+
+									json << "\"genes_union\":["; 
+									first_gene = true;
+									for (auto it = genes_union[i].begin(); it != genes_union[i].end(); it++){
+										if(first_gene){
+											first_gene = false;
+										}else{
+											json << ",";
+										}
+										json << *it;
+									}
+									json << "]"<< endl;
+
+								json << "}" << endl;
+							}
+						json << "]" << endl; // end  nodes
+					json << "},"; // end supertree
+
 					int n_transfers = 0;
 					int n_non_transfers = 0;
 					json << "\"transfers\":[";						
@@ -2313,9 +2319,11 @@ TODO:
 									json << "{";
 									json << "\"source\":" << i << "," ;
 									json << "\"target\":" << j << ",";
-									json << "\"type\":" << "\"rspr_shift\"" << ",";
-									json << "\"transf_count\":" << transfer_counts[i][j] << ",";
-									json << "\"n_genes\":" << trees_ids[i][j].size() << ",";
+									json << "\"attributes\":{";
+										json << "\"type\":" << "\"rspr_shift\"" << ",";
+										json << "\"transf_count\":" << transfer_counts[i][j] << ",";
+										json << "\"n_genes\":" << trees_ids[i][j].size();
+									json << "} ,";
 									json << "\"genes_transf\":[";
 									bool first_gene = true;
 									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
@@ -2377,9 +2385,12 @@ TODO:
 												json << "{";
 												json << "\"source\":" << i << "," ;
 												json << "\"target\":" << j << ",";
-												json << "\"type\":" << "\"common_genes\"" << ",";
-												json << "\"transf_count\": 0,";
-												json << "\"n_genes\": "<< common_genes_intersection.size() <<",";
+
+												json << "\"attributes\":{";
+													json << "\"type\":" << "\"common_genes\"" << ",";
+													json << "\"transf_count\": 0,";
+													json << "\"n_genes\": "<< common_genes_intersection.size();
+												json << "},";
 												json << "\"genes_transf\":[";
 												bool first_gene = true;
 												
