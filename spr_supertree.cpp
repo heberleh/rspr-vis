@@ -2225,19 +2225,25 @@ TODO:
 			strftime (buffer,80,"./output/visualization_data_%Y-%m-%d_%H-%M-%S.json",now);
 			std::ofstream json;
 			json.open(buffer);
+			// TODO compress as .zip or .7zip
 
 			// build json file with edges, nodes, attributes
 			if(json.is_open()){			
 				json << "{" << endl; // json begin
 					json << "\"groups_names\":";
-					json << "[" << group_names[0];
-					for(int i = 1; i < group_names.size(); i++){
-						json << "," << group_names[i];
+					json << "[";
+					if (LGT_GROUPS != ""){
+						json << group_names[0];
+						for(int i = 1; i < group_names.size(); i++){
+							json << "," << group_names[i];
+						}
 					}
 					json << "]," << endl;
 
-					json << "\"trees\":[";
+					json << "\"forest\":[";
 						for(int i = 0; i < gene_trees.size(); i++) {
+							vector<Node *> leaves = gene_trees[i]->find_leaves();
+
 							if (i == 0){
 								json << "{";
 							}else{
@@ -2246,9 +2252,35 @@ TODO:
 								json << "\"newick\":";
 								gene_trees[i]->numbers_to_labels(&reverse_label_map);					json << "\""<< gene_trees[i]->str_subtree() << "\"," << endl;
 								gene_trees[i]->labels_to_numbers(&label_map, &reverse_label_map);
+								json << "\"groups_distribution\":[";
+							
+								if (LGT_GROUPS != ""){									
+									vector<Node *> _supertree_leaves = super_tree->find_leaves();
+									vector<int> group_distribution = vector<int>(group_names.size(),0);
+									
+									// for each leaf of this gene tree
+									for(int j = 0; j < leaves.size(); j++) {
+										Node * leaf;
+										// find the identical leaf in the supertree
+										for(int k = 0; k < super_tree_leaves.size(); k++){
+											if (leaves[j]->get_name_num() == super_tree_leaves[k]->get_name_num()){
+												leaf = super_tree_leaves[k];
+											}
+										}
+										// find preorder index (supertree) of this leaf 
+										// find group index given the leaf
+										// increment count for this group
+										group_distribution[pre_to_group[leaf->get_preorder_number()]]++;
+									}
+									json << group_distribution[0];
+									for (int j = 1; j < group_distribution.size(); j++){
+										json << "," << group_distribution[j];
+									}
+								}									
+								json << "]," ;
 								json << "\"attributes\":{";
 									json << "\"function\":[\"abc\", \"def\"]," << endl;
-									json << "\"n_genomes\":" << gene_trees[i]->find_leaves().size() << "," << endl; 
+									json << "\"n_genomes\":" << leaves.size() << "," << endl; 
 									json << "\"rspr_dist\":" << distances[i]; // distances vector is sync with gene vector indexing in the add_transfers function
 								json << "}"; // end attributes
 							json << "}";
@@ -2271,12 +2303,31 @@ TODO:
 								}else{
 									json << "," << endl;
 								}
+								
+								Node* node = super_tree->find_by_prenum(i);
+								super_tree->numbers_to_labels(&reverse_label_map);	
+								vector<Node *>  node_leaves = node->find_leaves();
+								vector<string> names;
+								for (int j = 0; j < node_leaves.size(); j++){
+									names.push_back(node_leaves[j]->get_name());
+								}
+								sort(names.begin(), names.end());
+								super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
+								
+								string node_id;
+								node_id.append(names[0]);
+								for (int j = 1; j < names.size(); j++){
+									node_id.append("__");
+									node_id.append(names[j]);
+								}
+
 								json << "{";								
 								
-									if (LGT_GROUPS != ""){
+									json << "\"name\":" << node_id << "," << endl;
+									if (LGT_GROUPS == ""){
 										json << "\"group\": undefined,";
 									}else{
-										json << "\"group\":" << pre_to_group[i] << endl;
+										json << "\"group\":" << group_names[pre_to_group[i]] << endl;
 									}
 
 									json << "\"genes_intersect\":["; 
