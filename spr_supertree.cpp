@@ -2233,9 +2233,9 @@ TODO:
 					json << "\"groups_names\":";
 					json << "[";
 					if (LGT_GROUPS != ""){
-						json << group_names[0];
+						json << "\"" << group_names[0]  << "\"";
 						for(int i = 1; i < group_names.size(); i++){
-							json << "," << group_names[i];
+							json << ",\"" << group_names[i] << "\"";
 						}
 					}
 					json << "]," << endl;
@@ -2323,11 +2323,11 @@ TODO:
 
 								json << "{";								
 								
-									json << "\"name\":" << node_id << "," << endl;
+									json << "\"name\":\"" << node_id << "\"," << endl;
 									if (LGT_GROUPS == ""){
-										json << "\"group\": undefined,";
+										json << "\"group\": \"undefined\",";
 									}else{
-										json << "\"group\":" << group_names[pre_to_group[i]] << endl;
+										json << "\"group\":\"" << group_names[pre_to_group[i]] << "\","<< endl;
 									}
 
 									json << "\"genes_intersect\":["; 
@@ -2354,7 +2354,7 @@ TODO:
 									}
 									json << "]"<< endl;
 
-								json << "}" << endl;
+								json << "}" << endl; // end node
 							}
 						json << "]" << endl; // end  nodes
 					json << "},"; // end supertree
@@ -2377,11 +2377,11 @@ TODO:
 									json << "\"source\":" << i << "," ;
 									json << "\"target\":" << j << ",";
 									json << "\"attributes\":{";
-										json << "\"type\":" << "\"rspr_shift\"" << ",";
+										json << "\"type\":" << "\"rspr\"" << ",";
 										json << "\"transf_count\":" << transfer_counts[i][j] << ",";
 										json << "\"n_genes\":" << trees_ids[i][j].size();
 									json << "} ,";
-									json << "\"genes_transf\":[";
+									json << "\"genes\":[";
 									bool first_gene = true;
 									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
 										if (first_gene){
@@ -2423,7 +2423,7 @@ TODO:
 										}
 										json << *it;
 									}
-									json << "]}" << endl;
+									json << "]}" << endl; // end node
 								}else{
 									if (LGT_GROUPS != ""){			
 										if(pre_to_group[i] != pre_to_group[j]){
@@ -2444,11 +2444,11 @@ TODO:
 												json << "\"target\":" << j << ",";
 
 												json << "\"attributes\":{";
-													json << "\"type\":" << "\"common_genes\"" << ",";
+													json << "\"type\":" << "\"common_genes\",";
 													json << "\"transf_count\": 0,";
 													json << "\"n_genes\": "<< common_genes_intersection.size();
 												json << "},";
-												json << "\"genes_transf\":[";
+												json << "\"genes\":[";
 												bool first_gene = true;
 												
 												for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
