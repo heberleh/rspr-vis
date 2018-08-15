@@ -2294,6 +2294,25 @@ TODO:
 						json << "\"newick\":\"" << super_tree->str_subtree() << "\",";
 						super_tree->labels_to_numbers(&label_map, &reverse_label_map);	
 					
+
+						json << "\"groups_distribution\":[";
+					
+						if (LGT_GROUPS != ""){									
+							vector<Node *> supertree_leaves = super_tree->find_leaves();
+							vector<int> group_distribution = vector<int>(group_names.size(),0);
+							
+							// for each leaf of this gene tree
+							for(int i = 0; i < supertree_leaves.size(); i++) {
+								group_distribution[pre_to_group[supertree_leaves[i]->get_preorder_number()]]++;
+							}
+							json << group_distribution[0];
+							for (int i = 1; i < group_distribution.size(); i++){
+								json << "," << group_distribution[i];
+							}
+						}									
+						json << "]," ;
+
+
 						bool first_node = true;
 						json << "\"nodes\":[";
 							for(int i = 0; i < num_nodes; i++) {
@@ -2326,8 +2345,10 @@ TODO:
 									json << "\"name\":\"" << node_id << "\"," << endl;
 									if (LGT_GROUPS == ""){
 										json << "\"group\": \"undefined\",";
+										json << "\"group_index\": -1,";
 									}else{
 										json << "\"group\":\"" << group_names[pre_to_group[i]] << "\","<< endl;
+										json << "\"group_index\":\"" << pre_to_group[i] << "\","<< endl;
 									}
 
 									json << "\"genes_intersect\":["; 
