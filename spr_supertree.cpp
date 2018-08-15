@@ -2364,8 +2364,8 @@ TODO:
 					json << "\"transfers\":[";						
 						bool first_lt = true;	
 						for(int i = 0; i < num_nodes; i++) {							
-							for(int j = 0; j < num_nodes; j++) {
-								if (transfer_counts[i][j] > 0){									
+							for(int j = i+1; j < num_nodes; j++) {
+								if (transfer_counts[i][j] > 0 || transfer_counts[j][i] > 0){
 									n_transfers++;
 									if (first_lt){
 										json << endl;
@@ -2378,12 +2378,21 @@ TODO:
 									json << "\"target\":" << j << ",";
 									json << "\"attributes\":{";
 										json << "\"type\":" << "\"rspr\"" << ",";
-										json << "\"transf_count\":" << transfer_counts[i][j] << ",";
-										json << "\"n_genes\":" << trees_ids[i][j].size();
+										json << "\"transf_all\":" << transfer_counts[i][j] + transfer_counts[j][i] << ",";
+										json << "\"transf_ij\":" << transfer_counts[i][j] << ",";
+										json << "\"transf_ji\":" << transfer_counts[j][i];
 									json << "} ,";
 									json << "\"genes\":[";
 									bool first_gene = true;
-									for ( auto it = trees_ids[i][j].begin(); it != trees_ids[i][j].end(); it++){
+
+									// TODO create union of trees-ids ij ji.... 
+									// TODO do the same when it is not rspr
+									// TODO create attribute that specifies how many goes from i to j and how many goes from j to i -> so that in the visualization tool I can represent it as edges when requested.
+									set<int> union_trees;
+									union_trees.insert(trees_ids[i][j].begin(),trees_ids[i][j].end());
+									union_trees.insert(trees_ids[j][i].begin(),trees_ids[j][i].end());
+
+									for ( auto it = union_trees.begin(); it != union_trees.end(); it++){
 										if (first_gene){
 											first_gene = false;
 										}else{
@@ -2391,6 +2400,7 @@ TODO:
 										}
 										json << *it;
 									}
+						
 									json << "]," << endl;
 
 									json << "\"common_genes_union\":[";
@@ -2426,7 +2436,12 @@ TODO:
 									json << "]}" << endl; // end node
 								}else{
 									if (LGT_GROUPS != ""){			
-										if(pre_to_group[i] != pre_to_group[j]){
+										// if groups are different
+										// and group is not Mixed (0)
+										if( pre_to_group[i] != pre_to_group[j] && 
+											pre_to_group[i] != 0               && 
+											pre_to_group[j] != 0                ){
+
 											set<int> common_genes_intersection;
 
 											set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
@@ -2446,7 +2461,8 @@ TODO:
 												json << "\"attributes\":{";
 													json << "\"type\":" << "\"common_genes\",";
 													json << "\"transf_count\": 0,";
-													json << "\"n_genes\": "<< common_genes_intersection.size();
+													json << "\"transf_ij\": 0,";
+													json << "\"transf_ji\": 0";
 												json << "},";
 												json << "\"genes\":[";
 												bool first_gene = true;
