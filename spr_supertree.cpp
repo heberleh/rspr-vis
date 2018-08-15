@@ -2437,10 +2437,7 @@ TODO:
 								}else{
 									if (LGT_GROUPS != ""){			
 										// if groups are different
-										// and group is not Mixed (0)
-										if( pre_to_group[i] != pre_to_group[j] && 
-											pre_to_group[i] != 0               && 
-											pre_to_group[j] != 0                ){
+										if( pre_to_group[i] != pre_to_group[j]){
 
 											set<int> common_genes_intersection;
 
