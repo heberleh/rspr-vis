@@ -143,9 +143,11 @@ LGT ANALYSIS
 -lgt_analysis          Conduct an LGT analysis with the initial user-specified
                        or greedy addition tree
 
--lgt_visualization	   Output the LGT analysis data to be visualized using the 
-																		? VISUALIZATION SYSTEM
-			           If -lgt_visualization is set, other types of analysis will be ignored.
+-lgt_visualization	   Output the LGT analysis data to be visualized using the sTVis web-tool.
+					   If -lgt_visualization is set, other types of analysis will be ignored.
+
+-genes_attributes FILE Input .csv file containing attributes for each gene, in the same order as 
+					   in the trees file. Each attribute must be in one column. Values with ";" are treated as lists in the sTVis. Replace ; by _ or some other symbol, except ' " , ; and \n, if it is not the intention. Replace any comma , even if inside '' or "". The comma , is exclusive delimiter.
 
 -lgt_csv               Output the LGT analysis seperated by commas rather than
                        spaces.
@@ -154,7 +156,7 @@ LGT ANALYSIS
                        with -lgt_analysis. The group FILE contains a set of
                        groups consisting of a group name on one line, group
                        members one per line, and a blank line to seperate each
-                       group.
+                       group.					
                        
 *******************************************************************************
 OTHER OPTIONS
@@ -188,6 +190,7 @@ OTHER OPTIONS
 #include <algorithm>
 #include <list>
 #include <time.h>
+#include <boost/algorithm/string.hpp>
 #include "rspr.h"
 
 #include "Forest.h"
@@ -198,6 +201,7 @@ OTHER OPTIONS
 #include "lgt.h"
 #include "sparse_counts.h"
 #include "node_glom.h"
+
 
 using namespace std;
 
@@ -531,6 +535,7 @@ int main(int argc, char *argv[]) {
 	string OUTGROUP = "";
 	string INITIAL_SUPER_TREE = "";
 	string LGT_GROUPS = "";
+	string GENES_ATTRIBUTES = "";
 	bool INITIAL_SUPER_TREE_UNROOTED = false;
 	bool FIND_SUPPORT = false;
 	bool FIND_BIPARTITION_SUPPORT = false;
@@ -920,6 +925,15 @@ int main(int argc, char *argv[]) {
 				if (arg2[0] != '-')
 					LGT_GROUPS = string(arg2);
 				cout << "LGT_GROUPS=" << LGT_GROUPS 
+						<< endl;
+			}
+		}
+		else if (strcmp(arg, "-genes_attributes") == 0) {
+			if (max_args > argc) {
+				char *arg2 = argv[argc+1];
+				if (arg2[0] != '-')
+					GENES_ATTRIBUTES = string(arg2);
+				cout << "GENES_ATTRIBUTES=" << GENES_ATTRIBUTES 
 						<< endl;
 			}
 		}
@@ -2048,6 +2062,38 @@ TODO:
 			}
 			cout << endl;
 			#endif
+			
+			vector<map<string, string>> genes_atts = vector<map<string, string>>();
+			vector<string> genes_atts_names;
+			if (GENES_ATTRIBUTES != "") {
+				ifstream attributes_file;
+				attributes_file.open(GENES_ATTRIBUTES.c_str());
+
+				string line;				
+				if (attributes_file.is_open()) {
+
+					getline(attributes_file, line);
+					vector<string> attributes_names;
+					boost::split(attributes_names, line, [](char c){return c == ',';});
+					genes_atts_names = attributes_names;
+
+					while(attributes_file.good()) {
+						getline(attributes_file, line);
+						vector<string> values;
+						boost::split(values, line, [](char c){return c == ',';});
+						map<string,string> current_atts = map<string, string>();
+						for (int at = 0; at < attributes_names.size(); at++){
+							current_atts.insert(make_pair(attributes_names[at], values[at]));
+						}
+						genes_atts.push_back(current_atts);
+					}
+				}else{
+					cout << "The parameter -genes_attributes was set but the file could not be read. Please check: " << LGT_GROUPS << endl;
+					return -1;
+					/*@heberleh: added the above message and return in case the filename is wrong or the groups file does not exist. Is the bellow code associated to some other logic of the system? If not, remove it.*/
+					LGT_GROUPS = "";
+				}
+			}
 
 
 			vector<int> pre_to_group = vector<int>(num_nodes, 0);
@@ -2243,7 +2289,7 @@ TODO:
 					json << "\"forest\":[";
 						for(int i = 0; i < gene_trees.size(); i++) {
 							vector<Node *> leaves = gene_trees[i]->find_leaves();
-
+							map<string,string> current_atts = genes_atts[i];															
 							if (i == 0){
 								json << "{";
 							}else{
@@ -2279,7 +2325,11 @@ TODO:
 								}									
 								json << "]," ;
 								json << "\"attributes\":{";
-									json << "\"function\":[\"abc\", \"def\"]," << endl;
+									for(map<string, string>::const_iterator it = current_atts.begin(); it != current_atts.end(); it++){
+										string key = it->first;
+										string value = it->second;
+										json << "\""<< key <<"\"" << "\"" << value << "\""<< endl;
+									}
 									json << "\"n_genomes\":" << leaves.size() << "," << endl; 
 									json << "\"rspr_dist\":" << distances[i]; // distances vector is sync with gene vector indexing in the add_transfers function
 								json << "}"; // end attributes
