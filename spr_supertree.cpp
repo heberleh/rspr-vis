@@ -2077,16 +2077,19 @@ TODO:
 					boost::split(attributes_names, line, [](char c){return c == ',';});
 					genes_atts_names = attributes_names;
 
-					while(attributes_file.good()) {
-						getline(attributes_file, line);
+					while(getline(attributes_file, line)) {						
 						vector<string> values;
+						cout << line << endl;
 						boost::split(values, line, [](char c){return c == ',';});
+				
 						map<string,string> current_atts = map<string, string>();
 						for (int at = 0; at < attributes_names.size(); at++){
 							current_atts.insert(make_pair(attributes_names[at], values[at]));
 						}
 						genes_atts.push_back(current_atts);
 					}
+					cout << "Finished reading the annotation file." << endl;
+					attributes_file.close();
 				}else{
 					cout << "The parameter -genes_attributes was set but the file could not be read. Please check: " << LGT_GROUPS << endl;
 					return -1;
@@ -2289,7 +2292,9 @@ TODO:
 					json << "\"forest\":[";
 						for(int i = 0; i < gene_trees.size(); i++) {
 							vector<Node *> leaves = gene_trees[i]->find_leaves();
-							map<string,string> current_atts = genes_atts[i];															
+							
+							map<string,string> current_atts = genes_atts[i];
+																						
 							if (i == 0){
 								json << "{";
 							}else{
@@ -2325,10 +2330,11 @@ TODO:
 								}									
 								json << "]," ;
 								json << "\"attributes\":{";
-									for(map<string, string>::const_iterator it = current_atts.begin(); it != current_atts.end(); it++){
+
+									for(map<string, string>::const_iterator it = current_atts.begin(); it != current_atts.end(); it++){					
 										string key = it->first;
 										string value = it->second;
-										json << "\""<< key <<"\"" << "\"" << value << "\""<< endl;
+										json << "\""<< key <<"\": " << "\"" << value << "\","<< endl;
 									}
 									json << "\"n_genomes\":" << leaves.size() << "," << endl; 
 									json << "\"rspr_dist\":" << distances[i]; // distances vector is sync with gene vector indexing in the add_transfers function
