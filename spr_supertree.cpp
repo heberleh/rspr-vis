@@ -2293,7 +2293,10 @@ TODO:
 						for(int i = 0; i < gene_trees.size(); i++) {
 							vector<Node *> leaves = gene_trees[i]->find_leaves();
 							
-							map<string,string> current_atts = genes_atts[i];
+							map<string,string> current_atts;
+							if (GENES_ATTRIBUTES != "") {
+								map<string,string> current_atts = genes_atts[i];
+							}
 																						
 							if (i == 0){
 								json << "{";
