@@ -2295,7 +2295,7 @@ TODO:
 							
 							map<string,string> current_atts;
 							if (GENES_ATTRIBUTES != "") {
-								map<string,string> current_atts = genes_atts[i];
+								current_atts = genes_atts[i];
 							}
 																						
 							if (i == 0){
@@ -2463,7 +2463,7 @@ TODO:
 											json << "\"different_groups\": false, ";
 										}
 										json << "\"rspr\":" << "true, ";
-										json << "\"transf_all\":" << transfer_counts[i][j] + transfer_counts[j][i] << ",";
+										json << "\"transf_count\":" << transfer_counts[i][j] + transfer_counts[j][i] << ",";
 										json << "\"transf_ij\":" << transfer_counts[i][j] << ",";
 										json << "\"transf_ji\":" << transfer_counts[j][i];
 									json << "} ,";
