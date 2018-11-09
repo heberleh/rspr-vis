@@ -2400,7 +2400,7 @@ TODO:
 								}
 
 								json << "\""<< node_id << "\": {";								
-								
+									json << "\"preorder_number\":" << i << ","<< endl;
 									json << "\"name\":\"" << node_id << "\"," << endl;
 									if (LGT_GROUPS == ""){
 										json << "\"group\": \"undefined\",";
