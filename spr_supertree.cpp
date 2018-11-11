@@ -2456,17 +2456,6 @@ TODO:
 									json << "{";
 									json << "\"source\":" << i << "," ;
 									json << "\"target\":" << j << ",";								
-									json << "\"attributes\":{";
-										if (pre_to_group[i] != pre_to_group[j]){
-											json << "\"different_groups\": true, ";
-										}else{
-											json << "\"different_groups\": false, ";
-										}
-										json << "\"rspr\":" << "true, ";
-										json << "\"transf_count\":" << transfer_counts[i][j] + transfer_counts[j][i] << ",";
-										json << "\"transf_ij\":" << transfer_counts[i][j] << ",";
-										json << "\"transf_ji\":" << transfer_counts[j][i];
-									json << "} ,";
 									json << "\"genes\":[";
 									bool first_gene = true;
 
@@ -2491,8 +2480,12 @@ TODO:
 									json << "\"common_genes_union\":[";
 									first_gene = true;
 									set<int> common_genes_union;
+									set<int> union_genes_union;
 
 									set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
+
+									set_union(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(union_genes_union, union_genes_union.begin()));
+		
 
 									for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
 										if (first_gene){
@@ -2507,8 +2500,11 @@ TODO:
 									json << "\"common_genes_intersection\":[";
 									first_gene = true;
 									set<int> common_genes_intersection;
+									set<int> union_genes_intersection;
 
 									set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
+
+									set_union(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(union_genes_intersection, union_genes_intersection.begin()));
 
 									for ( auto it = common_genes_intersection.begin(); it != common_genes_intersection.end(); it++){
 										if (first_gene){
@@ -2518,14 +2514,32 @@ TODO:
 										}
 										json << *it;
 									}
-									json << "]}" << endl; // end node
+									json << "],\"attributes\":{";
+										if (pre_to_group[i] != pre_to_group[j]){
+											json << "\"different_groups\": true, ";
+										}else{
+											json << "\"different_groups\": false, ";
+										}
+										json << "\"rspr\":" << "true, ";
+										json << "\"n_genes_i\":" << common_genes_intersection.size() << ", ";
+										//json << "\"n_genes_u\":" << common_genes_union.size() << ", ";
+										json << "\"jaccard_dist_i\":" << (union_genes_intersection.size()-common_genes_intersection.size())*100/union_genes_intersection.size() << ", ";
+										json << "\"jaccard_dist_u\":" << (union_genes_union.size()-common_genes_union.size())*100/union_genes_union.size() << ", ";
+										json << "\"transf_count\":" << transfer_counts[i][j] + transfer_counts[j][i] << "";
+										//json << "\"transf_ij\":" << transfer_counts[i][j] << ",";
+										//json << "\"transf_ji\":" << transfer_counts[j][i];
+									json << "}";									
+									json << "}" << endl; // end node
 								}else{
 									if (LGT_GROUPS != ""){			
 										// if groups are different
 										
 										set<int> common_genes_intersection;
+										set<int> union_genes_intersection;
 
 										set_intersection(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(common_genes_intersection, common_genes_intersection.begin()));
+
+										set_union(genes_intersection[i].begin(), genes_intersection[i].end(), genes_intersection[j].begin(), genes_intersection[j].end(), inserter(union_genes_intersection, union_genes_intersection.begin()));										
 
 										if (common_genes_intersection.size() > 0){
 											n_non_transfers++;
@@ -2537,19 +2551,7 @@ TODO:
 											}
 											json << "{";
 											json << "\"source\":" << i << "," ;
-											json << "\"target\":" << j << ",";
-											
-											json << "\"attributes\":{";
-												if (pre_to_group[i] != pre_to_group[j]){
-													json << "\"different_groups\": true, ";
-												}else{
-													json << "\"different_groups\": false, ";
-												}											
-												json << "\"rspr\":" << "false, ";
-												json << "\"transf_count\": 0,";
-												json << "\"transf_ij\": 0,";
-												json << "\"transf_ji\": 0";
-											json << "},";
+											json << "\"target\":" << j << ",";									
 											json << "\"genes\":[";
 											bool first_gene = true;
 											
@@ -2566,8 +2568,12 @@ TODO:
 											json << "\"common_genes_union\":[";
 											first_gene = true;
 											set<int> common_genes_union;
+											set<int> union_genes_union;
 
 											set_intersection(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(common_genes_union, common_genes_union.begin()));
+
+											set_union(genes_union[i].begin(), genes_union[i].end(), genes_union[j].begin(), genes_union[j].end(), inserter(union_genes_union, union_genes_union.begin()));
+		
 
 											for ( auto it = common_genes_union.begin(); it != common_genes_union.end(); it++){
 												if (first_gene){
@@ -2590,7 +2596,22 @@ TODO:
 												}
 												json << *it;
 											}
-											json << "]}" << endl;
+											json << "],\"attributes\":{";
+												if (pre_to_group[i] != pre_to_group[j]){
+													json << "\"different_groups\": true, ";
+												}else{
+													json << "\"different_groups\": false, ";
+												}											
+												json << "\"rspr\":" << "false, ";
+												json << "\"n_genes_i\":" << common_genes_intersection.size() << ", ";
+												//json << "\"n_genes_u\":" << common_genes_union.size() << ", ";
+												json << "\"jaccard_dist_i\":" << (union_genes_intersection.size()-common_genes_intersection.size())*100/union_genes_intersection.size() << ", ";
+												json << "\"jaccard_dist_u\":" << (union_genes_union.size()-common_genes_union.size())*100/union_genes_union.size() << ", ";												
+												json << "\"transf_count\": 0";
+												//json << "\"transf_ij\": 0,";
+												//json << "\"transf_ji\": 0";
+											json << "}";											
+											json << "}" << endl;
 										}
 									
 									}
